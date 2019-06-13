@@ -34,6 +34,7 @@ group :development, :test do
   gem 'byebug', platforms: [:mri, :mingw, :x64_mingw]
   gem 'committee'
   gem 'committee-rails'
+  gem 'rspec-rails', '~> 3.8'
 end
 
 group :development do
