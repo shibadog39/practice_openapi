@@ -1,0 +1,948 @@
+openapi: 3.0.0
+
+info:
+  title: kakari フロントエンド API
+  description: kakari フロントエンド API
+  version: 1.0.0
+
+servers:
+  - url: https://{environment}/api/v1
+    variables:
+      environment:
+        default: drugstore.kakari.test
+        enum:
+          - stg-kakari-pharmacy.medpeer.jp
+          - drugstore.kakari.test
+          - kakari-pharmacy.medpeer.jp
+
+paths:
+  /current_user:
+    get:
+      summary: ログインユーザの取得
+      operationId: getCurrentUser
+      tags:
+        - current_user
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /prescriptions:
+    get:
+      summary: 処方せん一覧を取得する
+      operationId: getPrescriptions
+      tags:
+        - prescriptions
+      parameters:
+        - in: query
+          name: status
+          required: false
+          description: ステータスによる絞り込み
+          schema:
+            $ref: '#/components/schemas/PrescriptionStatus'
+        - in: query
+          name: keyword
+          required: false
+          description: 自由入力による絞り込み
+          schema:
+            type: string
+        - in: query
+          name: page
+          required: false
+          description: ページ数
+          schema:
+            type: integer
+        - in: query
+          name: sort
+          required: false
+          description: 並び替え
+          schema:
+            type: string
+            enum:
+              - preferredDate
+              - createdAt
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - totalCount
+                  - prescriptions
+                properties:
+                  totalCount:
+                    type: integer
+                  prescriptions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Prescription'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /prescriptions/{prescriptionId}:
+    get:
+      summary: 処方せんの詳細情報を取得する
+      operationId: getPrescription
+      tags:
+        - prescriptions
+      parameters:
+        - name: prescriptionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrescriptionDetail'
+        '404':
+          description: 対象の処方せんがありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+    patch:
+      summary: 処方せんのステータス更新
+      operationId: patchPrescription
+      tags:
+        - prescriptions
+      parameters:
+        - name: prescriptionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: status
+          required: true
+          schema:
+            $ref: '#/components/schemas/ChangablePrescriptionStatus'
+        - in: query
+          name: message
+          required: false
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    $ref: '#/components/schemas/ChangablePrescriptionStatus'
+        '404':
+          description: 対象の処方せんがありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /prescriptions/{prescriptionId}/patients:
+    get:
+      summary: 処方せんに紐づくアカウントに紐付いている全ての患者のプロフィールを取得する
+      operationId: getPrescriptionsProfile
+      tags:
+        - patients
+      parameters:
+        - name: prescriptionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - name
+                    - owner
+                    - age
+                    - birth
+                    - sex
+                    - tel
+                    - relationship
+                  properties:
+                    name:
+                      type: string
+                    owner:
+                      type: boolean
+                    age:
+                      type: string
+                    birth:
+                      type: string
+                    sex:
+                      type: string
+                    tel:
+                      type: string
+                    relationship:
+                      type: string
+        '404':
+          description: 対象の処方せんがありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /prescriptions/{prescriptionId}/messages:
+    get:
+      summary: 処方せんに紐づくアカウントに紐付いているチャットメッセージを取得する
+      operationId: getMessagesFromPrescription
+      tags:
+        - messages
+      parameters:
+        - name: prescriptionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: messageId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - chatId
+                  - accountName
+                  - finished
+                  - messages
+                properties:
+                  chatId:
+                    type: integer
+                  accountName:
+                    type: string
+                  finished:
+                    type: boolean
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '404':
+          description: 対象の患者アカウントがありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /accounts:
+    get:
+      summary: かかりつけ患者一覧を取得する
+      operationId: getAccounts
+      tags:
+        - accounts
+      parameters:
+        - in: query
+          name: message_state
+          required: false
+          description: 返信有無による絞り込み
+          schema:
+            $ref: '#/components/schemas/MessageState'
+        - in: query
+          name: keyword
+          required: false
+          description: 自由入力による絞り込み
+          schema:
+            type: string
+        - in: query
+          name: page
+          required: false
+          description: ページ数
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - totalCount
+                  - accounts
+                properties:
+                  totalCount:
+                    type: integer
+                  accounts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Account'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /accounts/{accountId}/patients:
+    get:
+      summary: アカウントに紐づく全ての患者のプロフィールを取得する
+      operationId: getAccountsProfile
+      tags:
+        - patients
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - name
+                    - owner
+                    - age
+                    - birth
+                    - sex
+                    - tel
+                    - relationship
+                  properties:
+                    name:
+                      type: string
+                    owner:
+                      type: boolean
+                    age:
+                      type: string
+                    birth:
+                      type: string
+                    sex:
+                      type: string
+                    tel:
+                      type: string
+                    relationship:
+                      type: string
+        '404':
+          description: 対象の患者アカウントがありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /accounts/{accountId}/prescription:
+    get:
+      summary: アカウントに紐づく最新の処方せんを取得
+      operationId: getAccountsPrescription
+      tags:
+        - prescriptions
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrescriptionDetail'
+        '204':
+          description: 表示する処方せんが見つかりません
+        '404':
+          description: 対象の処方せんがありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /accounts/{accountId}/messages:
+    get:
+      summary: チャットメッセージを取得する
+      operationId: getMessages
+      tags:
+        - messages
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: messageId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - chatId
+                  - accountName
+                  - finished
+                  - messages
+                properties:
+                  chatId:
+                    type: integer
+                  accountName:
+                    type: string
+                  finished:
+                    type: boolean
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        '404':
+          description: 対象の患者アカウントがありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /chats/{chatId}/messages:
+    post:
+      summary: チャットメッセージの送信
+      operationId: postMessage
+      tags:
+        - messages
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: message
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          description: 対象の患者アカウントがありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /signatures:
+    get:
+      summary: アカウントが登録している署名をステータス毎に取得する
+      operationId: getSignatures
+      tags:
+        - signatures
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - prescripting
+                  - waiting
+                  - completed
+                  - resend
+                  - cancelled
+                properties:
+                  prescripting:
+                    type: string
+                  waiting:
+                    type: string
+                  completed:
+                    type: string
+                  resend:
+                    type: string
+                  cancelled:
+                    type: string
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /new_arrivals:
+    get:
+      summary: 処方せんとチャットメッセージの最新の情報を取得する。現在時刻から3分1秒前までの処方せんとチャットメッセージを返す。prescriptionsは、prescription_detail_id、accountIdsは、新着メッセージが送られたaccountのidをそれぞれ配列で返す
+      operationId: getNewArrivals
+      tags:
+        - new_arrivals
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - prescriptionIds
+                  - accountIds
+                properties:
+                  prescriptionIds:
+                    type: array
+                    items:
+                      type: integer
+                  accountIds:
+                    type: array
+                    items:
+                      type: integer
+        '204':
+          description: 新着なし
+        '210':
+          description: ポーリング終了(本部アカウントの時など)
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+  /shops/{shopId}/opening_hours:
+    get:
+      summary: 営業時間の取得
+      operationId: getOpeningHours
+      tags:
+        - opening_hours
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - remark
+                  - dayOfTheWeeks
+                properties:
+                  remark:
+                    type: string
+                  dayOfTheWeeks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DayOfTheWeek'
+        '404':
+          description: 対象の店舗がありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+    patch:
+      summary: 営業時間の更新
+      operationId: patchOpeningHours
+      tags:
+        - opening_hours
+      parameters:
+        - name: shopId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: remark
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dayOfTheWeeks
+          in: query
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '204':
+          description: update成功
+        '404':
+          description: 対象の店舗がありません
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        '422':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+        default:
+          description: 予期しないエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Errors'
+
+
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+    Prescription:
+      type: object
+      required:
+        - id
+        - preferredDate
+        - preferredTime
+        - accountId
+        - accountName
+        - patientName
+        - relationship
+        - status
+        - read
+        - createdAt
+        - deleted
+        - suspended
+        - checkIn
+      properties:
+        id:
+          type: integer
+        preferredDate:
+          type: string
+        preferredTime:
+          type: string
+        accountId:
+          type: integer
+        accountName:
+          type: string
+        patientName:
+          type: string
+        relationship:
+          type: string
+          enum:
+            - 本人
+            - 配偶者
+            - 子ども
+            - 両親
+            - 兄弟
+            - その他
+        status:
+          $ref: '#/components/schemas/PrescriptionStatus'
+        read:
+          type: boolean
+        createdAt:
+          type: string
+        deleted:
+          type: boolean
+        suspended:
+          type: boolean
+        checkIn:
+          type: boolean
+    PrescriptionDetail:
+      type: object
+      required:
+        - id
+        - preferredDate
+        - preferredTime
+        - accountId
+        - accountName
+        - patientName
+        - relationship
+        - status
+        - createdAt
+        - imageUrls
+        - bringMedicationNotebook
+        - preferGenericDrug
+        - tel
+        - remark
+        - companyName
+        - shopName
+        - checkIn
+      properties:
+        id:
+          type: integer
+        preferredDate:
+          type: string
+        preferredTime:
+          type: string
+        accountId:
+          type: integer
+        accountName:
+          type: string
+        patientName:
+          type: string
+        relationship:
+          type: string
+          enum:
+            - 本人
+            - 配偶者
+            - 子ども
+            - 両親
+            - 兄弟
+            - その他
+        status:
+          $ref: '#/components/schemas/PrescriptionStatus'
+        createdAt:
+          type: string
+        imageUrls:
+          type: array
+          items:
+            type: string
+        weight:
+          type: number
+        bringMedicationNotebook:
+          type: string
+        preferGenericDrug:
+          type: string
+        tel:
+          type: string
+        remark:
+          type: string
+        enquetes:
+          type: array
+          items:
+            type: object
+            required:
+              - question
+              - answerText
+              - additionalComment
+            properties:
+              question:
+                type: string
+              answerText:
+                type: string
+              additionalComment:
+                type: string
+        companyName:
+          type: string
+        shopName:
+          type: string
+        checkIn:
+          type: boolean
+
+    PrescriptionStatus:
+      type: string
+      enum:
+        - accepted
+        - prescripting
+        - waiting
+        - completed
+        - resend
+        - cancelled
+    ChangablePrescriptionStatus:
+      type: string
+      enum:
+        - prescripting
+        - waiting
+        - completed
+        - resend
+        - cancelled
+    Message:
+      type: object
+      required:
+        - id
+        - myMessage
+        - content
+        - createdAt
+        - createdAtUnixTime
+      properties:
+        id:
+          type: integer
+        myMessage:
+          type: boolean
+        content:
+          type: string
+        createdAt:
+          type: string
+        createdAtUnixTime:
+          type: integer
+    MessageState:
+      type: string
+      enum:
+        - unread
+        - read
+        - reply
+    Account:
+      type: object
+      required:
+        - id
+        - name
+        - nameKana
+        - age
+        - sex
+        - unread
+        - needReply
+        - sentAt
+        - message
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nameKana:
+          type: string
+        age:
+          type: integer
+        sex:
+          type: string
+          enum:
+            - 男性
+            - 女性
+        unread:
+          type: boolean
+        needReply:
+          type: boolean
+        sentAt:
+          type: string
+        message:
+          type: string
+
+    DayOfTheWeek:
+      type: object
+      required:
+        - dayOfTheWeekCode
+        - dayOfTheWeekJa
+        - opened
+        - allDayOpened
+        - openingHours
+      properties:
+        dayOfTheWeekCode:
+          type: integer
+        dayOfTheWeekJa:
+          type: string
+        opened:
+          type: boolean
+        allDayOpened:
+          type: boolean
+        openingHours:
+          type: array
+          items:
+            type: object
+            required:
+              - openedAt
+              - closedAt
+            properties:
+              openedAt:
+                type: string
+              closedAt:
+                type: string
+
+    Errors:
+      required:
+        - statusCode
+        - errors
+      properties:
+        statusCode:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
