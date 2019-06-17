@@ -1,7 +1,7 @@
 class Api::V1::PostsController < ApplicationController
   def index
     posts = Post.order(created_at: :desc)
-    render json: { status: 'SUCCESS', message: 'loaded posts', data: posts }
+    render json: { unnecessary_prop: 'SUCCESS', message: 'loaded posts', data: posts }
   end
 
   def show
